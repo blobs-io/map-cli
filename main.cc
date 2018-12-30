@@ -139,14 +139,19 @@ void show_editor_menu(std::vector<nlohmann::json>* walls) {
         case 4: 
         {
             (*map)["objects"]["walls"] = *walls;
-            std::cout << "Path to output file: ";
+            std::cout << "Path to output file (type '.stdout' for console-only output): ";
             std::cin >> *input;
-            std::ofstream* file = new std::ofstream {*input};
-            if (!(*file)) {
-                std::cout << "An error occured while trying to open output file." << std::endl;
+            if (*input == ".stdout") {
+                std::cout << map->dump(4);
+            } else {
+                std::ofstream* file = new std::ofstream {*input};
+                if (!(*file)) {
+                    std::cout << "An error occured while trying to open output file." << std::endl;
+                } else {
+                    *file << std::setw(4) << *map;
+                }
+                delete file;
             }
-            *file << std::setw(4) << *map;
-            delete file;
         }
         break;
     }
