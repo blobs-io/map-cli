@@ -7,6 +7,46 @@
 static nlohmann::json* map = new nlohmann::json {};
 static std::string* input = new std::string{""};
 
+class wall {
+    private:
+        int* x;
+        int* y;
+        int* type;
+        static int count;
+    public:
+        wall(int*, int*, int*);
+        std::string to_string();
+        nlohmann::json to_json();
+        wall();
+        ~wall();
+};
+int wall::count = 0;
+
+wall::wall(int* _x, int* _y, int* _type) : x(_x), y(_y), type(_type) {
+    wall::count++;
+};
+wall::wall() {
+    int* temp_x = new int {0};
+    int* temp_y = new int {0};
+    int* temp_type = new int {0};
+    this->x = temp_x;
+    this->y = temp_y;
+    this->type = temp_type;
+    wall::count++;
+}
+wall::~wall() {
+    delete this->x;
+    delete this->y;
+    delete this->type;
+}
+std::string wall::to_string() {
+    return "{\"x\": " + std::to_string(*(this->x)) + ", \"y\": "  + std::to_string(*(this->y)) + ", \"type\": " + std::to_string(*(this->type)) + "}";
+}
+
+nlohmann::json wall::to_json() {
+    return nlohmann::json {};
+}
+
 void show_editor_menu(std::vector<nlohmann::json>*);
 
 int main() {
