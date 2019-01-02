@@ -6,48 +6,49 @@
 #include <iomanip>
 static nlohmann::json* map = new nlohmann::json {};
 static std::string* input = new std::string{""};
+static std::string* mapname = new std::string{"default"};
 
 class wall {
     private:
-        int* x;
-        int* y;
-        int* type;
+        int x;
+        int y;
+        int type;
         static int count;
     public:
-        wall(int*, int*, int*);
+        wall(int, int, int);
         std::string to_string();
         nlohmann::json to_json();
         wall();
-        ~wall();
+        int operator[] (std::string);
 };
 int wall::count = 0;
 
-wall::wall(int* _x, int* _y, int* _type) : x(_x), y(_y), type(_type) {
+wall::wall(int _x, int _y, int _type) : x(_x), y(_y), type(_type) {
     wall::count++;
 };
 wall::wall() {
-    int* temp_x = new int {0};
-    int* temp_y = new int {0};
-    int* temp_type = new int {0};
-    this->x = temp_x;
-    this->y = temp_y;
-    this->type = temp_type;
+    this->x = 0;
+    this->y = 0;
+    this->type = 0;
     wall::count++;
 }
-wall::~wall() {
-    delete this->x;
-    delete this->y;
-    delete this->type;
-}
 std::string wall::to_string() {
-    return "{\"x\": " + std::to_string(*(this->x)) + ", \"y\": "  + std::to_string(*(this->y)) + ", \"type\": " + std::to_string(*(this->type)) + "}";
+    return "{\"x\": " + std::to_string((this->x)) + ", \"y\": "  + std::to_string((this->y)) + ", \"type\": " + std::to_string((this->type)) + "}";
 }
 
 nlohmann::json wall::to_json() {
-    return nlohmann::json {};
+    return nlohmann::json {this->to_string()};
+}
+int wall::operator[] (std::string accessor) {
+    int retVal;
+    if (accessor == "x") retVal = (this->x);
+    else if (accessor == "y") retVal = (this->y);
+    else if (accessor == "type") retVal = (this->type);
+    else retVal = std::string::npos;
+    return retVal;
 }
 
-void show_editor_menu(std::vector<nlohmann::json>*);
+void show_editor_menu(std::vector<wall>*);
 
 int main() {
     std::cout << "blobs.io map generator" << std::endl
@@ -60,7 +61,7 @@ int main() {
     switch (std::stoi(*input)) {
         case 1: 
             {
-                std::vector<nlohmann::json> wallArray {};
+                std::vector<wall> wallArray {};
                 show_editor_menu(&wallArray);
             }
         break;
@@ -81,11 +82,13 @@ int main() {
                 nlohmann::json* json = new nlohmann::json {};
                 *file >> *json;
 
-                std::vector<nlohmann::json> wallArray = (*json)["objects"]["walls"];
-                
+                std::vector<wall> wallArray;
+                for (std::size_t i = 0; i < (*json)["objects"]["walls"].size(); ++i) {
+                    wallArray.push_back(wall((*json)["objects"]["walls"][i]["x"], (*json)["objects"]["walls"][i]["x"], (*json)["objects"]["walls"][i]["x"]));
+                }
+
                 std::cout << "File loaded.\n\n";
                 show_editor_menu(&wallArray);
-
 
                 delete json;
                 delete file;
@@ -101,9 +104,9 @@ int main() {
     return 0;
 }
 
-void show_editor_menu(std::vector<nlohmann::json>* walls) {
-        std::cout << "Amount of walls: " << walls->size() << std::endl;
-    std::cout << "1 - Find wall(s)" << std::endl
+void show_editor_menu(std::vector<wall>* walls) {
+    std::cout << "Amount of walls: " << walls->size()
+              << "1 - Find wall(s)" << std::endl
               << "2 - Add wall" << std::endl
               << "3 - Remove wall" << std::endl
               << "4 - Export map" << std::endl
@@ -115,23 +118,23 @@ void show_editor_menu(std::vector<nlohmann::json>* walls) {
             {
                 std::cout << "Input search type and value to find wall (e.g. 'x100', 'y30'): ";
                 std::cin >> *input;
-                std::vector<nlohmann::json> matches;
+                std::vector<wall> matches;
                 if (input->at(0) == 'x') {
                     for (std::size_t i=0;i < walls->size(); ++i) {
-                        if ((int)(*walls)[i]["x"] == std::stoi(input->substr(1))) {
-                            matches.push_back(nlohmann::json((*walls)[i]));
+                        if ((*walls)[i]["x"] == std::stoi(input->substr(1))) {
+                            matches.push_back(wall((*walls)[i]["x"], (*walls)[i]["y"], (*walls)[i]["type"]));
                         }
                     }
                 } else if (input->at(0) == 'y') {
                     for (std::size_t i=0;i < walls->size(); ++i) {
-                        if ((int)(*walls)[i]["y"] == std::stoi(input->substr(1))) {
-                            matches.push_back(nlohmann::json((*walls)[i]));
+                        if ((*walls)[i]["y"] == std::stoi(input->substr(1))) {
+                            matches.push_back(wall((*walls)[i]["x"], (*walls)[i]["y"], (*walls)[i]["type"]));
                         }
                     }
                 }
                 std::cout << "Found " << matches.size() << " walls: " << std::endl;
-                for (const nlohmann::json& wall : matches) {
-                    std::cout << "- X: " << wall["x"] << " | Y: " << wall["y"] << " | Type: " << wall["type"] << std::endl;
+                for (std::size_t i = 0; i < matches.size(); ++i) {
+                    std::cout << "- X: " << matches[i]["x"] << " | Y: " << matches[i]["y"] << " | Type: " << matches[i]["type"] << std::endl;
                 }
                 show_editor_menu(walls);
             }
@@ -141,12 +144,11 @@ void show_editor_menu(std::vector<nlohmann::json>* walls) {
                 std::cout << "Please input values (x,y,type), example: 10,10,0. Type anything else to exit this menu." << std::endl;
                 while(std::cin >> *input) {
                     if (!std::regex_match(*input, std::regex("\\d+,\\d+,\\d"))) break;
-                    nlohmann::json tempobj;
                     int x, y, type;
                     x = std::stoi(input->substr(0, input->find(',')));
                     y = std::stoi(input->substr(input->find(',') + 1, input->substr(input->find(',') + 1).find(',')));
                     type = std::stoi(input->substr(input->rfind(',')+1));
-                    tempobj = nlohmann::json::parse("{\"x\": " + std::to_string(x) + ", \"y\": " + std::to_string(y) +", \"type\": " + std::to_string(type) + "}");
+                    wall tempobj (x, y, type);
                     walls->push_back(tempobj);
                 }
                 show_editor_menu(walls);
@@ -159,14 +161,14 @@ void show_editor_menu(std::vector<nlohmann::json>* walls) {
                 int counter = 0;
                 if (input->at(0) == 'x') {
                     for (std::size_t i=0;i < walls->size(); ++i) {
-                        if ((int)(*walls)[i]["x"] == std::stoi(input->substr(1))) {
+                        if ((*walls)[i]["x"] == std::stoi(input->substr(1))) {
                             walls->erase(walls->begin() + i);
                             counter++;
                         }
                     }
                 } else if (input->at(0) == 'y') {
                     for (std::size_t i=0;i < walls->size(); ++i) {
-                        if ((int)(*walls)[i]["y"] == std::stoi(input->substr(1))) {
+                        if ((*walls)[i]["y"] == std::stoi(input->substr(1))) {
                             walls->erase(walls->begin() + i);
                             counter++;
                         }
@@ -178,7 +180,11 @@ void show_editor_menu(std::vector<nlohmann::json>* walls) {
         break;
         case 4: 
         {
-            (*map)["objects"]["walls"] = *walls;
+            std::vector<nlohmann::json> _tmpwalls {};
+            for(std::size_t i = 0; i < walls->size(); ++i) {
+                _tmpwalls.push_back((*walls)[i].to_json());
+            }
+            (*map)["objects"]["walls"] = _tmpwalls;
             std::cout << "Path to output file (type '.stdout' for console-only output): ";
             std::cin >> *input;
             if (*input == ".stdout") {
